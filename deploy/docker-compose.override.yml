@@ -1,0 +1,42 @@
+services:
+  wikibase:
+    labels:
+      - "traefik.http.routers.wikibase.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=tentwentyfour:$$apr1$$n.kbY2ap$$3t7Z4VSgMAtKNeYgWy8jP."
+  wdqs:
+    volumes:
+      - ./config/wdqs-prefixes.conf:/wdqs/prefixes.conf:ro
+  wdqs-frontend:
+    environment:
+      - BRAND_TITLE=TenTwentyFour's LUDAP Query Service
+    env_file:
+      - .env
+    volumes:
+      - ./config/wdqs-fe-config.json:/templates/custom-config.json
+    labels:
+      - "traefik.http.routers.wdqs-frontend.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=tentwentyfour:$$apr1$$n.kbY2ap$$3t7Z4VSgMAtKNeYgWy8jP."
+  quickstatements:
+    labels:
+      - "traefik.http.routers.quickstatements.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=tentwentyfour:$$apr1$$n.kbY2ap$$3t7Z4VSgMAtKNeYgWy8jP."
+  querybuilder:
+    image: docker.1024.lu/ludap/query-builder
+    restart: unless-stopped
+    depends_on:
+      - wdqs
+      - wdqs-proxy
+    environment:
+      - VUE_APP_WIKIBASE_API_URL='https://ludap.debug.lu/w/api.php'
+      - VUE_APP_QUERY_SERVICE_EMBED_URL='https://wdqs.debug.lu/embed.html'
+      - VUE_APP_QUERY_SERVICE_URL='https://wdqs.debug.lu/'
+      - VUE_APP_SUBCLASS_PROPERTY_MAP='{"default":"P279","P171":"P171","P131":"P131"}'
+      - VUE_APP_SI_CONVERSION_PROPERTY='P2370'
+      - VUE_APP_URL_SHORTNER_SERVICE_URL='https://meta.wikimedia.beta.wmflabs.org/w/api.php'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.querybuilder.rule=Host(`${QUERYBUILDER_PUBLIC_HOST}`)"
+      - "traefik.http.routers.querybuilder.entrypoints=websecure"
+      - "traefik.http.routers.querybuilder.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.querybuilder.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=tentwentyfour:$$apr1$$n.kbY2ap$$3t7Z4VSgMAtKNeYgWy8jP."
